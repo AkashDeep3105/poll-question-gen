@@ -158,32 +158,37 @@ export class DashboardService {
 
         let totalPolls = 0;
         let totalResponses = 0;
+        let totalPossibleResponses = 0;
         let totalPointsDistributed = 0;
         let allStudentScores: number[] = [];
         let activeRooms: any[] = [];
         let recentRooms: any[] = [];
         let responsesPerRoom: { roomName: string, totalResponses: number }[] = [];
         let totalStudentsAcrossRooms = 0;
-        let studentsWhoResponded = new Set<string>();
+        let totalRespondedAcrossRooms = 0;
 
         for (const room of rooms) {
+            const studentCount = room.joinedStudents?.length || room.students?.length || 0;
             const pollCount = room.polls?.length || 0;
             const responseCount = room.polls?.reduce((sum, poll) => sum + (poll.answers?.length || 0), 0) || 0;
-            const uniqueStudents = new Set(room.students?.map((s: any) => s.toString()) || []);
-            const studentCount = uniqueStudents.size;
 
             totalPolls += pollCount;
             totalResponses += responseCount;
             totalStudentsAcrossRooms += studentCount;
 
-            // Aggregate points and track responding students
+            // Aggregate points and track responding students for this specific room
             let roomPoints = 0;
             const studentScoreMap = new Map<string, number>();
+            const roomResponders = new Set<string>();
+
             for (const poll of room.polls ?? []) {
+                const pollExpected = poll.lockedActiveUsers?.length || studentCount;
+                totalPossibleResponses += pollExpected;
+
                 for (const answer of poll.answers ?? []) {
                     const pts = answer.points ?? 0;
                     roomPoints += pts;
-                    studentsWhoResponded.add(answer.userId);
+                    roomResponders.add(answer.userId);
                     studentScoreMap.set(
                         answer.userId,
                         (studentScoreMap.get(answer.userId) || 0) + pts
@@ -191,6 +196,7 @@ export class DashboardService {
                 }
             }
             totalPointsDistributed += roomPoints;
+            totalRespondedAcrossRooms += roomResponders.size;
             allStudentScores.push(...studentScoreMap.values());
 
             const roomData = {
@@ -220,9 +226,9 @@ export class DashboardService {
         activeRooms.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
         responsesPerRoom.sort((a, b) => b.totalResponses - a.totalResponses);
 
-        // Proper participation rate: students who responded / total students
+        // Proper participation rate: responded students per room / total students per room
         const participationRate = totalStudentsAcrossRooms > 0
-            ? `${Math.round((studentsWhoResponded.size / totalStudentsAcrossRooms) * 100)}%`
+            ? `${Math.round((totalRespondedAcrossRooms / totalStudentsAcrossRooms) * 100)}%`
             : '0%';
 
         // Scoring insights
@@ -277,6 +283,7 @@ export class DashboardService {
                 totalAssessmentRooms: rooms.length,
                 totalPolls,
                 totalResponses,
+                totalPossibleResponses,
                 totalPointsDistributed,
                 participationRate
             },

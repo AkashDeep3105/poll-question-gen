@@ -13,6 +13,7 @@ export interface TeacherData {
     totalAssessmentRooms: number;
     totalPolls: number;
     totalResponses: number;
+    totalPossibleResponses?: number;
     totalPointsDistributed: number;
     participationRate: string;
   };
@@ -139,7 +140,7 @@ export default function TeacherDashboard() {
   // Calculate participation rate for pie chart
   const participationData = [
     { name: "Responses", value: stats.totalResponses || 0 },
-    { name: "No Response", value: Math.max(0, (stats.totalPolls || 0) - (stats.totalResponses || 0)) }
+    { name: "No Response", value: Math.max(0, (stats.totalPossibleResponses || 0) - (stats.totalResponses || 0)) }
   ];
 
   // Bar chart data for recent rooms
